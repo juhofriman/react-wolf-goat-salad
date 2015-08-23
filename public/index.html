@@ -3,14 +3,62 @@
   <head>
     <title>Hello React</title>
     <!-- Not present in the tutorial. Just for basic styling. -->
-    <link rel="stylesheet" href="css/base.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.13.0/react.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.13.0/JSXTransformer.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.2/marked.min.js"></script>
+    <style>
+        .container {
+            width: 30%;
+            height: 40em;
+            border:1px solid black;
+            float:left;
+            padding:2px;
+        }
+        .container.left {
+
+        }
+        .container.right {
+        }
+        .container h1 {
+            text-align: center;
+        }
+        .river {
+            background-color: blue;
+        }
+        .thing {
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom: 5px;
+            width: 100px;
+            height: 100px;
+        }
+        .thing.wolf {
+            background-image: url('images/wolf.jpg')
+        }
+        .thing.salad {
+            background-image: url('images/salad.jpg')
+        }
+        .thing.goat {
+            background-image: url('images/goat.jpg')
+        }
+        .boat {
+            position:absolute;
+            background-color: brown;
+            height: 300px;
+            width: 150px;
+            top: 4em;
+        }
+        .boat.left {
+            left: 30%;
+        }
+        .boat.right {
+            left: 50%;
+        }
+    </style>
   </head>
   <body>
-    <div id="content"></div>
+    <div id="container"></div>
     <script type="text/jsx;harmony=true" src="scripts/react-wfg-ui.js"></script>
   </body>
 </html>
