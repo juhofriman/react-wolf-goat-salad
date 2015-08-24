@@ -3,7 +3,9 @@ var INITIAL_STATE = {
   wolf: {name: "wolf", side:"left"},
   goat: {name: "goat", side:"left"},
   salad: {name: "salad", side:"left"},
-  rower:"left"
+  rower:"left",
+  notification: "Initial state",
+  finished: false
 }
 
 function complementSide(side) {
@@ -20,26 +22,6 @@ function newSideWhenPicking(thingSide, rowerSide) {
   return thingSide;
 }
 
-var stateTransformations = (function() {
-  return {
-    pickToBoat: function(state, thing) {
-      // Unfortunately there is no way in updating with
-      // React.addons.update "dynamically"
-      // So instead we create new copy of state and manipulate it
-      var stub = React.addons.update(state, {});
-      thing.side = newSideWhenPicking(thing.side, state.rower);
-      stub[thing] = thing;
-      return stub;
-    },
-    rowToOtherSide: function(state) {
-      // Just switch side of the rower
-      return React.addons.update(state, {rower: {$apply:
-                                                 function(side) {
-                                                   return complementSide(side);
-                                                 } }});
-    }
-  };
-})();
 
 var stateConstraints = (function() {
   return {
@@ -88,6 +70,50 @@ var stateRepresenter = (function () {
     },
     rower: function(state) {
       return state.rower;
+    },
+    boatIsFull: function(state) {
+      return kreator("boat", state).kreate().length === 1;
+    },
+    stateIsFinished: function(state) {
+      return kreator("right", state).kreate().length === 3;
+    }
+  };
+})();
+
+
+var stateTransformations = (function() {
+  return {
+    pickToBoat: function(state, thing) {
+      // TODO: This is horrible
+
+
+      // Unfortunately there is no way in updating with
+      // React.addons.update "dynamically"
+      // So instead we create new copy of state and manipulate it
+      var stub = React.addons.update(state, {});
+      var newSideForThing = newSideWhenPicking(thing.side, state.rower);
+      // If boat is already full and thing was loaded just revert back
+      if(stateRepresenter.boatIsFull(state) && newSideForThing === 'boat') {
+        newSideForThing = thing.side;
+      }
+      stub[thing.name] = React.addons.update(thing, {side: {$set: newSideForThing}});
+
+      if(stub[thing.name].side === 'boat') {
+        stub.notification = "Loaded " + thing.name + " to boat";
+      } else {
+        stub.notification = "Unloaded " + thing.name + " to " + stub[thing.name].side + " riverbank";
+      }
+      stub.finished = true;
+      return stub;
+    },
+    rowToOtherSide: function(state) {
+      // Just switch side of the rower
+      var notification = "Rowed " + state.rower + " -> " + complementSide(state.rower);
+      return React.addons.update(state, {rower: {$apply:
+                                                 function(side) {
+                                                   return complementSide(side);
+                                                 } },
+                                         notification: {$set: notification}});
     }
   };
 })();
@@ -120,7 +146,11 @@ var pubsub = (function() {
 
 var WFGWorld = React.createClass({
   selectToBoat: function(thing) {
-    this.setState(stateTransformations.pickToBoat(this.state, thing));
+    this.setState(stateTransformations.pickToBoat(this.state, thing), function() {
+        if(stateRepresenter.stateIsFinished(this.state)) {
+          alert("Jee");
+        }
+    });
   },
   rowToOtherSide: function() {
     var newState = stateTransformations.rowToOtherSide(this.state);
@@ -141,6 +171,7 @@ var WFGWorld = React.createClass({
     var inside = [];
     return (
       <div>
+        <div>{this.state.notification}</div>
         <Boat side={stateRepresenter.rower(this.state)} inside={stateRepresenter.inBoat(this.state)}/>
         <RiverBank side="left" things={stateRepresenter.left(this.state)}/>
         <div className="container river"></div>
