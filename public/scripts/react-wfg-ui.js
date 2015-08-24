@@ -4,8 +4,7 @@ var INITIAL_STATE = {
   goat: {name: "goat", side:"left"},
   salad: {name: "salad", side:"left"},
   rower:"left",
-  notification: "Initial state",
-  finished: false
+  notification: "Initial state"
 }
 
 function complementSide(side) {
@@ -83,27 +82,15 @@ var stateRepresenter = (function () {
 
 var stateTransformations = (function() {
   return {
-    pickToBoat: function(state, thing) {
-      // TODO: This is horrible
-
-
-      // Unfortunately there is no way in updating with
-      // React.addons.update "dynamically"
-      // So instead we create new copy of state and manipulate it
-      var stub = React.addons.update(state, {});
-      var newSideForThing = newSideWhenPicking(thing.side, state.rower);
-      // If boat is already full and thing was loaded just revert back
-      if(stateRepresenter.boatIsFull(state) && newSideForThing === 'boat') {
-        newSideForThing = thing.side;
+    pickToBoat: function(state, thingName) {
+      var newPosition = newSideWhenPicking(state[thingName].side, state.rower);
+      if(stateRepresenter.boatIsFull(state) && newPosition === 'boat') {
+        // Boat is already full
+        newPosition = state[thingName].side;
       }
-      stub[thing.name] = React.addons.update(thing, {side: {$set: newSideForThing}});
 
-      if(stub[thing.name].side === 'boat') {
-        stub.notification = "Loaded " + thing.name + " to boat";
-      } else {
-        stub.notification = "Unloaded " + thing.name + " to " + stub[thing.name].side + " riverbank";
-      }
-      stub.finished = true;
+      var stub = React.addons.update(state, {notification: {$set: "Took " + thingName + " to " + newPosition}});
+      stub[thingName].side = newPosition;
       return stub;
     },
     rowToOtherSide: function(state) {
@@ -146,9 +133,9 @@ var pubsub = (function() {
 
 var WFGWorld = React.createClass({
   selectToBoat: function(thing) {
-    this.setState(stateTransformations.pickToBoat(this.state, thing), function() {
+    this.setState(stateTransformations.pickToBoat(this.state, thing.name), function() {
         if(stateRepresenter.stateIsFinished(this.state)) {
-          alert("Jee");
+          alert("Wupee!");
         }
     });
   },
