@@ -96,10 +96,7 @@ var stateTransformations = (function() {
     rowToOtherSide: function(state) {
       // Just switch side of the rower
       var notification = "Rowed " + state.rower + " -> " + complementSide(state.rower);
-      return React.addons.update(state, {rower: {$apply:
-                                                 function(side) {
-                                                   return complementSide(side);
-                                                 } },
+      return React.addons.update(state, {rower: {$apply: complementSide},
                                          notification: {$set: notification}});
     }
   };
