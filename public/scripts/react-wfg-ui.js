@@ -1,12 +1,65 @@
-var state = (function () {
-  // This is bit retarded
-  var wolf = {name: "wolf", side:"left"};
-  var goat = {name: "goat", side:"left"};
-  var salad = {name: "salad", side:"left"};
-  var rower = "left";
+/* Initial state as an example how WGS world is defined */
+var INITIAL_STATE = {
+  wolf: {name: "wolf", side:"left"},
+  goat: {name: "goat", side:"left"},
+  salad: {name: "salad", side:"left"},
+  rower:"left"
+}
+
+function complementSide(side) {
+  return side === 'left' ? 'right' : 'left';
+}
+
+function newSideWhenPicking(thingSide, rowerSide) {
+  if(thingSide === 'boat') {
+    return rowerSide;
+  }
+  if(thingSide === rowerSide) {
+    return 'boat';
+  }
+  return thingSide;
+}
+
+var stateTransformations = (function() {
+  return {
+    pickToBoat: function(state, thing) {
+      // Unfortunately there is no way in updating with
+      // React.addons.update "dynamically"
+      // So instead we create new copy of state and manipulate it
+      var stub = React.addons.update(state, {});
+      thing.side = newSideWhenPicking(thing.side, state.rower);
+      stub[thing] = thing;
+      return stub;
+    },
+    rowToOtherSide: function(state) {
+      // Just switch side of the rower
+      return React.addons.update(state, {rower: {$apply:
+                                                 function(side) {
+                                                   return complementSide(side);
+                                                 } }});
+    }
+  };
+})();
+
+var stateConstraints = (function() {
+  return {
+    isSafe: function(state) {
+      if(state.wolf.side === state.goat.side && state.rower !== state.wolf.side && state.wolf.side !== 'boat') {
+        return false;
+      }
+      if(state.goat.side === state.salad.side && state.rower !== state.goat.side && state.goat.side !== 'boat') {
+        return false;
+      }
+      return true;
+    }
+  };
+})();
+
+/* This one is used to create _representations_ from state */
+var stateRepresenter = (function () {
 
   // It'a a kreator for array representations of state
-  var kreator = (function(side) {
+  var kreator = (function(side, state) {
     var arr = [];
     var addIfOnSide = function(thing) {
       if(thing.side === side) {
@@ -15,38 +68,26 @@ var state = (function () {
     }
     return {
       kreate: function() {
-        addIfOnSide(wolf);
-        addIfOnSide(goat)
-        addIfOnSide(salad)
+        addIfOnSide(state.wolf);
+        addIfOnSide(state.goat)
+        addIfOnSide(state.salad)
         return arr;
       }
     };
   });
 
   return {
-    left: function() {
-      return kreator("left").kreate();
+    left: function(state) {
+      return kreator("left", state).kreate();
     },
-    right: function() {
-      return kreator("right").kreate();
+    right: function(state) {
+      return kreator("right", state).kreate();
     },
-    inBoat: function() {
-      return kreator("boat").kreate();
+    inBoat: function(state) {
+      return kreator("boat", state).kreate();
     },
-    rower: function() {
-      return rower;
-    },
-    rowToOtherSide: function() {
-      rower = rower === 'left' ? 'right' : 'left';
-      return this;
-    },
-    selectToBoat: function(thing) {
-      if(thing.side === 'boat') {
-        thing.side = rower;
-      } else if(thing.side === rower) {
-        thing.side = "boat";
-      }
-      return this;
+    rower: function(state) {
+      return state.rower;
     }
   };
 })();
@@ -79,13 +120,18 @@ var pubsub = (function() {
 
 var WFGWorld = React.createClass({
   selectToBoat: function(thing) {
-    this.setState(state.selectToBoat(thing));
+    this.setState(stateTransformations.pickToBoat(this.state, thing));
   },
   rowToOtherSide: function() {
-    this.setState(state.rowToOtherSide());
+    var newState = stateTransformations.rowToOtherSide(this.state);
+    if(stateConstraints.isSafe(newState)) {
+      this.setState(newState);
+    } else {
+      alert("That is not safe move!");
+    }
   },
   getInitialState: function() {
-    return state;
+    return INITIAL_STATE;
   },
   componentDidMount: function() {
     pubsub.subscribe("SELECT_TO_BOAT", this.selectToBoat);
@@ -95,10 +141,10 @@ var WFGWorld = React.createClass({
     var inside = [];
     return (
       <div>
-        <Boat side={this.state.rower()} inside={this.state.inBoat()}/>
-        <RiverBank side="left" things={this.state.left()}/>
+        <Boat side={stateRepresenter.rower(this.state)} inside={stateRepresenter.inBoat(this.state)}/>
+        <RiverBank side="left" things={stateRepresenter.left(this.state)}/>
         <div className="container river"></div>
-        <RiverBank side="right" things={this.state.right()}/>
+        <RiverBank side="right" things={stateRepresenter.right(this.state)}/>
       </div>
     );
   }
